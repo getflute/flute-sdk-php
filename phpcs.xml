@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<ruleset name="flute-sdk">
+    <description>PSR-12 for the Flute PHP SDK.</description>
+    <file>src</file>
+    <file>tests</file>
+    <arg name="extensions" value="php"/>
+    <arg name="colors"/>
+    <arg value="sp"/>
+    <rule ref="PSR12"/>
+</ruleset>

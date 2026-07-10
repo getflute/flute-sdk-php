@@ -1,0 +1,10 @@
+version: 2
+updates:
+  # Keep the SHA-pinned GitHub Actions current via reviewed PRs. SHA pinning
+  # (ci.yml) is what protects the secret-bearing live/publish jobs from a
+  # mutable-tag repoint; Dependabot is the other half — without it, pinned
+  # actions silently stop receiving upstream security patches.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

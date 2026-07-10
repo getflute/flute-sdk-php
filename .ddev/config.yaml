@@ -1,0 +1,20 @@
+name: flute
+type: php
+docroot: .
+php_version: "8.1"
+webserver_type: nginx-fpm
+xdebug_enabled: false
+additional_hostnames: []
+additional_fqdns: []
+database:
+    type: mariadb
+    version: "11.8"
+omit_containers: [db]
+use_dns_when_possible: true
+composer_version: "2"
+# Sandbox credentials are intentionally NOT committed here. Put your own
+# web_environment block (FLUTE_CLIENT_ID, FLUTE_CLIENT_SECRET, FLUTE_PARTNER_CLIENT_ID,
+# FLUTE_PARTNER_CLIENT_SECRET, FLUTE_WEBHOOK_SECRET) in a gitignored
+# .ddev/config.local.yaml — DDEV merges config.*.yaml automatically. See
+# CONTRIBUTING.md ("Local setup") for the full variable inventory.
+corepack_enable: false

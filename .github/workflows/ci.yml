@@ -1,0 +1,109 @@
+name: CI
+
+# CI & distribution — lint, static analysis, unit tests, and an examples
+# syntax check run on every supported PHP version. Live sandbox tests
+# (integration + regression) are secret-gated and run on every tag push; a
+# release (Packagist notify) only happens after they pass, so a tagged-release
+# green always means the live suite ran.
+#
+# NOTE: a green PR / default-branch check does NOT prove live API compatibility
+# or that the examples run end to end — those only execute in the secret-gated
+# `live` job. On PRs, examples get a `php -l` syntax check only.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.2', '8.3', '8.4', '8.5']
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: Validate composer.json
+        run: composer validate --strict
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Dependency security audit
+        run: composer audit --no-dev --locked
+      - name: Coding standard (PSR-12)
+        run: composer lint
+      - name: Static analysis (PHPStan level 8)
+        run: composer stan
+      - name: Lint examples (syntax check)
+        # examples/ is outside the PHPCS/PHPStan scope (src + tests only) and only
+        # runs end to end in the secret-gated live job. A PR-safe `php -l` sweep
+        # at least catches syntax breakage on every PR and PHP version.
+        run: find examples -name '*.php' -print0 | xargs -0 -n1 -P4 php -l
+      - name: Unit tests
+        run: composer test:unit
+
+  live:
+    name: Live sandbox (integration + regression)
+    runs-on: ubuntu-latest
+    needs: checks
+    # Run on every tag push (the release gate) and on opt-in pushes to main.
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'push' && vars.RUN_INTEGRATION == 'true') }}
+    # Env var names must match what the test code reads (tests/Support/LiveTestCase.php).
+    env:
+      FLUTE_CLIENT_ID: ${{ secrets.FLUTE_CLIENT_ID }}
+      FLUTE_CLIENT_SECRET: ${{ secrets.FLUTE_CLIENT_SECRET }}
+      FLUTE_PARTNER_CLIENT_ID: ${{ secrets.FLUTE_PARTNER_CLIENT_ID }}
+      FLUTE_PARTNER_CLIENT_SECRET: ${{ secrets.FLUTE_PARTNER_CLIENT_SECRET }}
+      FLUTE_WEBHOOK_SECRET: ${{ secrets.FLUTE_WEBHOOK_SECRET }}
+      FLUTE_MERCHANT_ID: ${{ vars.FLUTE_MERCHANT_ID }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Require live credentials (no silent skip)
+        # A green check must mean the live tests ran. If the required secrets are
+        # absent, fail loudly instead of letting every live test skip to exit 0.
+        # FLUTE_MERCHANT_ID stays optional — its tests skip cleanly when no
+        # merchant is visible, which is a real state, not a misconfiguration.
+        run: |
+          missing=
+          for var in FLUTE_CLIENT_ID FLUTE_CLIENT_SECRET FLUTE_PARTNER_CLIENT_ID FLUTE_PARTNER_CLIENT_SECRET FLUTE_WEBHOOK_SECRET; do
+            if [ -z "${!var}" ]; then missing="$missing $var"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Live credentials missing:$missing — refusing to report green while live tests skip."
+            exit 1
+          fi
+      - name: Integration tests (sandbox)
+        run: composer test:integration
+      - name: Regression tests (sandbox)
+        run: composer test:regression
+
+  publish:
+    runs-on: ubuntu-latest
+    # Gate the release on the live suite: no publish unless the sandbox tests ran
+    # and passed. Reverting to a faster cadence is a one-line `needs:` change.
+    needs: [checks, live]
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Notify Packagist
+        env:
+          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+          PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
+        run: |
+          if [ -z "$PACKAGIST_TOKEN" ]; then
+            echo "Packagist credentials not configured; skipping publish notification."
+            exit 0
+          fi
+          curl -fsS -X POST \
+            "https://packagist.org/api/update-package?username=${PACKAGIST_USERNAME}&apiToken=${PACKAGIST_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d "{\"repository\":{\"url\":\"https://github.com/${GITHUB_REPOSITORY}\"}}"

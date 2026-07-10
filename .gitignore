@@ -1,0 +1,21 @@
+# Credentials — never commit
+.env
+.env.*
+
+# Composer
+/vendor/
+composer.lock
+
+# Tooling caches
+.phpunit.cache/
+.phpunit.result.cache
+.phpcs-cache
+phpstan.neon.local
+/build/
+
+# Local DDEV environment — only config.yaml is tracked; DDEV regenerates the rest.
+/.ddev/*
+!/.ddev/config.yaml
+
+# Temporary files
+tmp/

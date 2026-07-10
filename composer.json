@@ -1,0 +1,49 @@
+{
+    "name": "flute/sdk",
+    "description": "Official PHP SDK for the Flute payment platform.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["flute", "payments", "sdk", "api"],
+    "homepage": "https://developer.flute.com",
+    "require": {
+        "php": ">=8.1",
+        "ext-ctype": "*",
+        "ext-json": "*",
+        "guzzlehttp/guzzle": "^7.12.1"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.0",
+        "phpunit/phpunit": "^10.5",
+        "squizlabs/php_codesniffer": "^4.0"
+    },
+    "autoload": {
+        "psr-4": { "Flute\\Sdk\\": "src/" }
+    },
+    "autoload-dev": {
+        "psr-4": { "Flute\\Sdk\\Tests\\": "tests/" }
+    },
+    "scripts": {
+        "lint": "phpcs",
+        "lint:fix": "phpcbf",
+        "stan": "phpstan analyse --no-progress",
+        "audit:deps": "@composer audit --no-dev --locked",
+        "test:unit": "phpunit --testsuite unit",
+        "test:integration": "phpunit --testsuite integration",
+        "test:regression": "phpunit --testsuite regression --testdox",
+        "test:matrix": "bin/test-matrix.sh",
+        "check": [
+            "@composer validate --strict",
+            "@lint",
+            "@stan",
+            "@composer audit --no-dev --locked",
+            "@test:unit"
+        ]
+    },
+    "config": {
+        "platform": {
+            "php": "8.1.99"
+        },
+        "sort-packages": true
+    },
+    "minimum-stability": "stable"
+}
