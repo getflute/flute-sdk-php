@@ -171,7 +171,7 @@ final class FluteConfigTest extends TestCase
         ]);
 
         // Every generic path a debugging integrator might hit — except var_export,
-        // which has no maskable hook (ADR 0010) and is documented as unsafe.
+        // which has no maskable hook and is documented as unsafe.
         ob_start();
         var_dump($config);
         $varDump = (string) ob_get_clean();

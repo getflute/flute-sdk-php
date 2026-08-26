@@ -155,8 +155,9 @@ final class TransactionsRegressionTest extends RegressionTestCase
     /** @testdox H-21: the decline card surfaces a Declined response, not an exception */
     public function testDeclineCardSurfacesDeclinedStatus(): void
     {
-        // Declines are HTTP 200 envelopes, not FluteApiException (divergence
-        // log entry 20). The AVS-passing address isolates the card decline.
+        // Declines are HTTP 200 envelopes, not FluteApiException (that stays
+        // the contract for transport-level 4xx/5xx). The AVS-passing address
+        // isolates the card decline.
         $declined = $this->flute()->transactions->saleTransaction(self::declineCard(1.21));
 
         self::assertTransactionStatus('Declined', $declined);

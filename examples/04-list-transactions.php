@@ -31,7 +31,7 @@ foreach ($page->items as $transaction) {
      * Use the typed accessors. List rows key these fields differently on the
      * wire (id/date/currencyCode vs transactionId/transactionDateTime/currency
      * on get-by-id), but the DTO normalizes both shapes, so reads are uniform
-     * and you never reach into toArray() for identifiers (divergence entry 21).
+     * and you never reach into toArray() for identifiers.
      */
     $date = substr(str_replace('T', ' ', (string) $transaction->transactionDateTime), 0, 16);
     $amount = $transaction->totalAmount === null

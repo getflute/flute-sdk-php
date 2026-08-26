@@ -109,7 +109,7 @@ final class MerchantResponsesTest extends TestCase
     {
         // The retained raw payload is scrubbed key-aware, so casing variants,
         // alias credential keys, and future credential fields are masked too —
-        // not only the exact `clientSecret` key (CR-08-7 S2).
+        // not only the exact `clientSecret` key.
         $created = CreateMerchantApiKeyResponse::fromArray([
             'clientId' => 'key-7',
             'clientSecret' => 'cs_live_SUPERSECRET',

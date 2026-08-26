@@ -178,7 +178,7 @@ final class TransactionResponsesTest extends TestCase
 
         self::assertSame('tx-list-1', $details->transactionId);
         self::assertSame('2026-06-16T12:00:00Z', $details->transactionDateTime);
-        // Exercise the shared trait on its second consumer (CR-06 F10): the
+        // Exercise the shared trait on its second consumer: the
         // fallback-mapped wire string parses to an immutable date. The first
         // consumer (TransactionResponse) is covered in testMalformedPayloads.
         self::assertInstanceOf(\DateTimeImmutable::class, $details->transactionDateTimeAsObject());
