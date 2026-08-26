@@ -155,7 +155,7 @@ changes byte order and breaks the HMAC.
 
 - **Laravel:** `$request->getContent()`
 - **Symfony:** `$request->getContent()`
-- **WooCommerce/WordPress:** `file_get_contents('php://input')` inside the REST callback
+- **Other frameworks:** `file_get_contents('php://input')` inside the request handler
 - **Vanilla PHP:** `file_get_contents('php://input')`
 
 **Replay protection.** `verify()` rejects deliveries older than the 5-minute
