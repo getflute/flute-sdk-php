@@ -22,9 +22,9 @@ use PHPUnit\Framework\TestCase;
  *
  * The delivery is a thin, fetch-by-id event: the transaction id is at
  * `data.object.id` (with `data.object.resourceType: "transaction"`) and there is no
- * inline status/amount — call getTransaction(id) for detail. The canonical envelope
- * is documented in docs/open-questions.md (Flute has not yet published it in the
- * OpenAPI contract).
+ * inline status/amount — call getTransaction(id) for detail. Flute's OpenAPI
+ * contract does not define this delivery envelope (only the webhook management
+ * objects); the shape here is the one confirmed first-party from live deliveries.
  *
  * What this guards: header parsing ("v1,<base64>"), signed-content composition over
  * the exact raw bytes, and the delivery envelope shape. It does not re-prove the

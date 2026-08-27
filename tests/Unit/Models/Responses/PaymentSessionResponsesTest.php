@@ -73,4 +73,186 @@ final class PaymentSessionResponsesTest extends TestCase
         self::assertNull($response->transactionDetails);
         self::assertSame($raw, $response->toArray());
     }
+
+    public function testGetSessionResponseHydratesCheckoutReadBackFields(): void
+    {
+        // Get body shape from the live sandbox (2026-08-23 verification run):
+        // same keys and order, wire types as observed. checkoutUrl is not in the
+        // get body (create response only) and surchargeAmount is null on a Created
+        // session. The ACH fragments are synthetic — the sandbox cannot complete
+        // an ACH payment.
+        $raw = [
+            'statusId' => 1,
+            'status' => 'Created',
+            'mode' => 1,
+            'skipAddressVerification' => false,
+            'customerId' => null,
+            'vaultedPaymentMethodId' => null,
+            'referenceId' => 'ref-1',
+            'tipAmount' => null,
+            'returnUrl' => 'https://merchant.example/checkout/return?order=ref-1',
+            'paymentMethodTypes' => ['card', 'ach'],
+            'metadata' => ['attempt' => '2', 'orderId' => 'wc-1042'],
+            'afterCompletionMessage' => null,
+            'pageName' => 'Merchant Checkout',
+            'expiresAt' => '2026-08-24T00:00:00Z',
+            'paymentNotes' => null,
+            'achAccountLast2' => '34',
+            'achRoutingLast2' => '21',
+            'surchargeAmount' => null,
+            'transactionDetails' => null,
+        ];
+
+        $response = PaymentSessionResponse::fromArray($raw);
+
+        self::assertSame('https://merchant.example/checkout/return?order=ref-1', $response->returnUrl);
+        self::assertSame(['attempt' => '2', 'orderId' => 'wc-1042'], $response->metadata);
+        self::assertSame('2026-08-24T00:00:00Z', $response->expiresAt);
+        self::assertSame('Merchant Checkout', $response->pageName);
+        self::assertSame(['card', 'ach'], $response->paymentMethodTypes);
+        self::assertNull($response->checkoutUrl);
+        self::assertNull($response->surchargeAmount);
+        self::assertSame('34', $response->achAccountLast2);
+        self::assertSame('21', $response->achRoutingLast2);
+        // Existing typed fields are unaffected.
+        self::assertSame(1, $response->statusId);
+        self::assertSame('ref-1', $response->referenceId);
+        // Raw escape hatch still carries everything.
+        self::assertSame($raw, $response->toArray());
+    }
+
+    public function testGetSessionResponseReadBackFieldsTolerateMissingAndMistypedValues(): void
+    {
+        $response = PaymentSessionResponse::fromArray([
+            'metadata' => ['orderId' => 'wc-1', 'count' => 2],
+            'paymentMethodTypes' => ['card', 3, 'ach'],
+            'surchargeAmount' => '2.25',
+            'achAccountLast2' => 34,
+        ]);
+
+        // Non-string map values and list entries are dropped, not laundered.
+        self::assertSame(['orderId' => 'wc-1'], $response->metadata);
+        self::assertSame(['card', 'ach'], $response->paymentMethodTypes);
+        // Numeric strings hydrate as float, like every other amount.
+        self::assertSame(2.25, $response->surchargeAmount);
+        // An int fragment is not a string: null, still reachable via toArray().
+        self::assertNull($response->achAccountLast2);
+        self::assertSame(34, $response->toArray()['achAccountLast2']);
+        self::assertNull($response->returnUrl);
+        self::assertNull($response->expiresAt);
+        self::assertNull($response->pageName);
+        self::assertNull($response->checkoutUrl);
+        self::assertNull($response->achRoutingLast2);
+
+        // Zero is a real amount, not an absent one; a wire float passes through.
+        self::assertSame(0.0, PaymentSessionResponse::fromArray(['surchargeAmount' => 0])->surchargeAmount);
+        self::assertSame(1.5, PaymentSessionResponse::fromArray(['surchargeAmount' => 1.5])->surchargeAmount);
+        // checkoutUrl is not on the get body today; a present value must still hydrate.
+        self::assertSame(
+            'https://checkout.example/s/ps-1',
+            PaymentSessionResponse::fromArray(['checkoutUrl' => 'https://checkout.example/s/ps-1'])->checkoutUrl,
+        );
+        // A list-shaped metadata is not a map; an object-shaped method list is not a list.
+        $mistyped = PaymentSessionResponse::fromArray([
+            'metadata' => ['a', 'b'],
+            'paymentMethodTypes' => ['primary' => 'card'],
+        ]);
+        self::assertNull($mistyped->metadata);
+        self::assertNull($mistyped->paymentMethodTypes);
+    }
+
+    public function testGetSessionResponseDebugInfoScrubsAchFragmentsOnlyWhenFuller(): void
+    {
+        // Two-digit display fragments stay readable: the scrub masks runs of
+        // three or more digits, so it fires only on a fuller echo.
+        $short = PaymentSessionResponse::fromArray(['achAccountLast2' => '34', 'achRoutingLast2' => '21']);
+        $debug = $short->__debugInfo();
+        self::assertSame('34', $debug['achAccountLast2']);
+        self::assertSame('21', $debug['achRoutingLast2']);
+        self::assertStringContainsString('"achAccountLast2":"34"', (string) json_encode($debug['raw']));
+
+        // A server echoing a fuller account or routing number is masked in the
+        // typed view and in the retained raw.
+        $fuller = PaymentSessionResponse::fromArray([
+            'achAccountLast2' => '123456789012',
+            'achRoutingLast2' => '021000021',
+            'metadata' => ['orderId' => 'wc-1042'],
+            'transactionDetails' => ['customerPan' => '4111111111111111'],
+        ]);
+        $debug = $fuller->__debugInfo();
+        self::assertSame('************', $debug['achAccountLast2']);
+        self::assertSame('*********', $debug['achRoutingLast2']);
+        self::assertStringNotContainsString(
+            '4111111111111111',
+            (string) json_encode($debug['transactionDetails']),
+        );
+        $rawJson = (string) json_encode($debug['raw']);
+        self::assertStringNotContainsString('123456789012', $rawJson);
+        self::assertStringNotContainsString('021000021', $rawJson);
+        self::assertStringNotContainsString('4111111111111111', $rawJson);
+        // Diagnostics stay readable.
+        self::assertStringContainsString('wc-1042', $rawJson);
+
+        ob_start();
+        var_dump($fuller);
+        $dump = (string) ob_get_clean();
+        self::assertStringNotContainsString('123456789012', $dump);
+        self::assertStringNotContainsString('021000021', $dump);
+        self::assertStringNotContainsString('4111111111111111', $dump);
+
+        // toArray() remains the explicit raw path.
+        self::assertSame('123456789012', $fuller->toArray()['achAccountLast2']);
+
+        // An int echo under the ACH keys: not a string, so the typed property is
+        // null, but the raw view still gets scrubbed — short stays readable, a
+        // fuller run is masked.
+        $intEcho = PaymentSessionResponse::fromArray([
+            'achAccountLast2' => 34,
+            'achRoutingLast2' => 21000021,
+        ]);
+        $debug = $intEcho->__debugInfo();
+        self::assertNull($intEcho->achAccountLast2);
+        self::assertNull($intEcho->achRoutingLast2);
+        self::assertSame('34', $debug['raw']['achAccountLast2']);
+        $rawJson = (string) json_encode($debug['raw']);
+        self::assertStringNotContainsString('21000021', $rawJson);
+
+        ob_start();
+        var_dump($intEcho);
+        $dump = (string) ob_get_clean();
+        self::assertStringNotContainsString('21000021', $dump);
+
+        self::assertSame(21000021, $intEcho->toArray()['achRoutingLast2']);
+    }
+
+    public function testGetSessionResponseDebugInfoScrubsTypedUserSuppliedFieldsLikeRaw(): void
+    {
+        // The typed view and the retained raw get the same key-aware scrub: a
+        // credential-named metadata key masks wholesale, a signed returnUrl has
+        // its token run masked, and diagnostics stay readable in both.
+        $session = PaymentSessionResponse::fromArray([
+            'metadata' => ['clientSecret' => 'sk_live_abcdef1234567890', 'orderId' => 'wc-1042'],
+            'returnUrl' => 'https://shop.example.com/return?order=1042&sig=3f9a8c7d6e5b4a39281716151413121110',
+            'pageName' => 'Checkout',
+        ]);
+        $debug = $session->__debugInfo();
+
+        self::assertSame('***', $debug['metadata']['clientSecret']);
+        self::assertSame('wc-1042', $debug['metadata']['orderId']);
+        self::assertStringNotContainsString('3f9a8c7d6e5b4a39281716151413121110', $debug['returnUrl']);
+        self::assertStringStartsWith('https://shop.example.com/return?order=1042&sig=', $debug['returnUrl']);
+        self::assertSame('Checkout', $debug['pageName']);
+        self::assertSame($debug['metadata'], $debug['raw']['metadata']);
+        self::assertSame($debug['returnUrl'], $debug['raw']['returnUrl']);
+
+        ob_start();
+        var_dump($session);
+        $dump = (string) ob_get_clean();
+        self::assertStringNotContainsString('sk_live_abcdef1234567890', $dump);
+        self::assertStringNotContainsString('3f9a8c7d6e5b4a39281716151413121110', $dump);
+
+        // The properties and toArray() are untouched.
+        self::assertSame('sk_live_abcdef1234567890', $session->metadata['clientSecret'] ?? null);
+        self::assertSame('sk_live_abcdef1234567890', $session->toArray()['metadata']['clientSecret']);
+    }
 }

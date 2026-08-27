@@ -365,7 +365,7 @@ final class TokenManagerTest extends TestCase
         // Populate the cache so the masked view has a live token to hide.
         self::assertSame('tok-SUPERSECRET', $manager->getAccessToken());
 
-        // Every maskable generic path — var_export has no hook (ADR 0010) and is
+        // Every maskable generic path — var_export has no hook and is
         // documented as unsafe.
         ob_start();
         var_dump($manager);

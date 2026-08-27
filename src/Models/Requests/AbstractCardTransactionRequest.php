@@ -24,9 +24,10 @@ abstract class AbstractCardTransactionRequest implements \JsonSerializable
     /**
      * accountNumber/securityCode are marked #[\SensitiveParameter] so a constructor
      * TypeError (e.g. a bad-typed amount) cannot capture PAN/CVV in its stack-trace
-     * args on PHP 8.2+. On the PHP 8.1 floor the attribute is inert, so set
-     * zend.exception_ignore_args=On in production there — see docs/open-questions.md,
-     * "PHP 8.1 and Exception-Trace Redaction".
+     * args on PHP 8.2+. On the PHP 8.1 floor the attribute is inert (recorded but
+     * not enforced by the engine), so a thrown exception can still carry the real
+     * arguments into any error tracker that serializes trace args. The only 8.1
+     * mitigation is zend.exception_ignore_args=On in production.
      *
      * @param int $cardDataSource 1 = Internet (server-side API default)
      */

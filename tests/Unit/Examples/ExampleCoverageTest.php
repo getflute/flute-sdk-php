@@ -15,7 +15,7 @@ use PHPUnit\Framework\TestCase;
  * a deleted (or added) example cannot silently shrink/skip live coverage.
  *
  * Note: the partner onboarding example deliberately prints its once-only
- * clientSecret (sandbox-scoped, revoked in-script) — see ADR 0007 — so there is
+ * clientSecret (sandbox-scoped, revoked in-script), so there is
  * intentionally no "examples must not print secrets" assertion here.
  */
 final class ExampleCoverageTest extends TestCase

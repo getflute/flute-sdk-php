@@ -122,7 +122,7 @@ final class TokenManager
     {
         return [
             // isset(): the client is left uninitialized by __unserialize().
-            // @phpstan-ignore isset.initializedProperty
+            // @phpstan-ignore isset.property
             'httpClient' => isset($this->httpClient) ? get_debug_type($this->httpClient) : null,
             'tokenUrl' => $this->tokenUrl,
             'clientId' => $this->clientId,

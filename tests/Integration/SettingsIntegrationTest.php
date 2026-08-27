@@ -26,7 +26,7 @@ final class SettingsIntegrationTest extends LiveTestCase
             throw $e;
         }
 
-        // Test account: zeroCostProcessingOptionId 1 ("None"); see live-sandbox-findings.
+        // Test account: zeroCostProcessingOptionId 1 ("None").
         self::assertNotNull($settings->zeroCostProcessingOptionId);
         self::assertNotNull($settings->zeroCostProcessingOption);
         self::assertSame('USD', $settings->currencyIsoCode);

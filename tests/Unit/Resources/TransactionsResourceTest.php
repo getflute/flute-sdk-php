@@ -71,8 +71,9 @@ final class TransactionsResourceTest extends TestCase
     public function testDeclinedSaleSurfacesAsDeclinedStatusNotException(): void
     {
         // Real card declines come back HTTP 200 with status "Declined" and
-        // processor details — NOT a 4xx exception (divergence log #20, observed
-        // live 2026-06-10). The SDK must hydrate the declined envelope so callers
+        // processor details — NOT a 4xx exception (observed live 2026-06-10;
+        // FluteApiException stays the contract for transport-level 4xx/5xx only).
+        // The SDK must hydrate the declined envelope so callers
         // read $response->status rather than catching an exception.
         $factory = new MockFluteFactory();
         $flute = $factory->flute([

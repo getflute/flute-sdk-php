@@ -72,6 +72,62 @@ final class Data
     }
 
     /**
+     * Extract a JSON list of strings under $key. Returns null when the key is
+     * absent or its value is not a list (a scalar or an object-shaped array);
+     * non-string entries are skipped and the result re-indexed, so the
+     * list<string> contract holds without laundering. An empty list is kept.
+     *
+     * @param array<string, mixed> $data
+     *
+     * @return list<string>|null
+     */
+    public static function strList(array $data, string $key): ?array
+    {
+        $value = $data[$key] ?? null;
+        if (!is_array($value) || !array_is_list($value)) {
+            return null;
+        }
+
+        $out = [];
+        foreach ($value as $item) {
+            if (is_string($item)) {
+                $out[] = $item;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Extract an object-shaped map of string values under $key. Same container
+     * guard as arr() (a list is rejected, an empty array is kept); non-string
+     * values are dropped so every value is a string. Keys are array-key, not
+     * string: PHP decodes a numeric-string JSON key such as "1042" to int and
+     * cannot hold it as a string, so it is kept as-is rather than dropped. An
+     * object keyed "0", "1", ... decodes to a list and is rejected.
+     *
+     * @param array<string, mixed> $data
+     *
+     * @return array<array-key, string>|null
+     */
+    public static function strMap(array $data, string $key): ?array
+    {
+        $value = self::arr($data, $key);
+        if ($value === null) {
+            return null;
+        }
+
+        $out = [];
+        foreach ($value as $k => $v) {
+            if (is_string($v)) {
+                $out[$k] = $v;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
      * Hydrate a payload list under $key into objects via $factory, guarding the
      * container and each row as object-shaped. A non-array container or row is
      * skipped, never laundered — the same guard the list DTOs reimplemented by

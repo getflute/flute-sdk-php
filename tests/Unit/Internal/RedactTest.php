@@ -90,8 +90,8 @@ final class RedactTest extends TestCase
 
     public function testDetailsMasksOpaqueTokenUnderNonSensitiveKey(): void
     {
-        // ADR-0001: non-sensitive keys get the same conservative treatment as
-        // free text, which includes opaque-token masking. "apiKey" normalizes to
+        // Non-sensitive keys get the same conservative treatment as free text,
+        // which includes opaque-token masking. "apiKey" normalizes to
         // "apikey" — not a substring of any sensitive key (in particular not
         // "token") — so it takes the non-sensitive branch, which must still mask
         // an opaque secret the gateway echoes back. (Mirrors the free-text token
@@ -126,7 +126,7 @@ final class RedactTest extends TestCase
 
     public function testDetailsRedactsAlphabeticCredentialsWholesale(): void
     {
-        // Regression (CR-08-6 S1): letter-only / no-digit secrets survived the
+        // Regression: letter-only / no-digit secrets survived the
         // partial content scrub because they are neither digit runs nor mixed
         // alphanumeric tokens. Wholesale credential redaction must remove them.
         $masked = Redact::details([
@@ -326,7 +326,7 @@ final class RedactTest extends TestCase
 
     public function testMessageMasksHighEntropyReferenceIdsByDesign(): void
     {
-        // Documented trade-off (ADR 0001): the opaque-token scrub cannot tell a
+        // Deliberate trade-off: the opaque-token scrub cannot tell a
         // leaked secret from a UUID-shaped correlation id or an alphanumeric
         // order/idempotency reference, so it masks all of them in free text. The
         // canonical correlation id is preserved separately via
@@ -341,7 +341,7 @@ final class RedactTest extends TestCase
 
     public function testOpaqueTokenScrubStaysLinearOnLargeServerControlledBody(): void
     {
-        // Regression (CR-06 F1): the opaque-token scrub matched 12+ char runs
+        // Regression: the opaque-token scrub matched 12+ char runs
         // with in-pattern lookaheads that rescanned the forward run at every
         // start position. On a long letterless dash run (each dash a fresh start
         // that never finds a letter) that was O(n^2) and did not trip PCRE's

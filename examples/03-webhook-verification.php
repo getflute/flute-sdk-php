@@ -16,7 +16,8 @@ $flute = new Flute([
 // The body is OPAQUE to verification — the HMAC covers the exact raw bytes; the SDK
 // never parses it. The shape below mirrors Flute's real delivery envelope (verified
 // first-party 2026-06-26): a thin event whose transaction id is at data.object.id —
-// call $flute->transactions->getTransaction(id) for detail. See docs/open-questions.md.
+// call $flute->transactions->getTransaction(id) for detail. The envelope is not in
+// Flute's published OpenAPI contract; treat it as observed shape, not schema.
 $secret = (string) (getenv('FLUTE_WEBHOOK_SECRET') ?: 'whsec_example_secret');
 $webhookId = 'evt-0001';
 $timestamp = (string) time();

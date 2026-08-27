@@ -53,6 +53,47 @@ final class DataTest extends TestCase
         self::assertSame([], Data::arr(['x' => []], 'x'));
     }
 
+    public function testStrListKeepsStringEntriesAndRejectsNonLists(): void
+    {
+        self::assertSame(['card', 'ach'], Data::strList(['x' => ['card', 'ach']], 'x'));
+        // Non-string entries are skipped and the list re-indexed, never laundered.
+        self::assertSame(['card', 'ach'], Data::strList(['x' => ['card', 3, null, 'ach']], 'x'));
+        // An empty list stays an empty list.
+        self::assertSame([], Data::strList(['x' => []], 'x'));
+        // Absent, scalar, and object-shaped values are not lists.
+        self::assertNull(Data::strList([], 'x'));
+        self::assertNull(Data::strList(['x' => 'card'], 'x'));
+        self::assertNull(Data::strList(['x' => ['a' => 'card']], 'x'));
+    }
+
+    public function testStrMapKeepsStringValuesAndRejectsLists(): void
+    {
+        self::assertSame(
+            ['orderId' => 'wc-1', 'attempt' => '2'],
+            Data::strMap(['m' => ['orderId' => 'wc-1', 'attempt' => '2']], 'm'),
+        );
+        // Non-string values (including null) are dropped so the string-map contract holds.
+        self::assertSame(
+            ['orderId' => 'wc-1'],
+            Data::strMap(
+                ['m' => ['orderId' => 'wc-1', 'attempt' => 2, 'nested' => ['a' => 'b'], 'cleared' => null]],
+                'm',
+            ),
+        );
+        // A numeric-string JSON key decodes to an int key in PHP and cannot be
+        // held as a string; it is kept with its value rather than dropped.
+        self::assertSame(
+            [1042 => 'primary', 'orderId' => 'wc-1042'],
+            Data::strMap(['m' => ['1042' => 'primary', 'orderId' => 'wc-1042']], 'm'),
+        );
+        // Empty array is the ambiguous decoding of an empty JSON object: kept.
+        self::assertSame([], Data::strMap(['m' => []], 'm'));
+        // Absent, scalar, and list-shaped values are not maps.
+        self::assertNull(Data::strMap([], 'm'));
+        self::assertNull(Data::strMap(['m' => 'oops'], 'm'));
+        self::assertNull(Data::strMap(['m' => ['a', 'b']], 'm'));
+    }
+
     public function testMapListHydratesObjectRowsAndSkipsNonArrayRows(): void
     {
         // Object-shaped rows are hydrated via the factory; scalar rows (a string,

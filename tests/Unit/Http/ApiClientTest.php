@@ -273,7 +273,7 @@ final class ApiClientTest extends TestCase
         // The opaque-token scrub masks a UUID-shaped correlation id if it appears
         // in free-text Details — but the structured getCorrelationId() reads the
         // dedicated envelope field, which is never redacted, so the primary
-        // support diagnostic is not lost (ADR 0001).
+        // support diagnostic is not lost.
         $correlationId = '04a9afeb-7c1d-4e2a-9b3f-1a2b3c4d5e6f';
         $client = $this->client([
             self::tokenResponse(),

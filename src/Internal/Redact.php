@@ -148,8 +148,10 @@ final class Redact
      * Apply key-aware redaction to a field => messages map. Messages under a
      * sensitive field name are scrubbed aggressively; all others get the same
      * conservative free-text treatment as message() — PAN-shaped runs AND opaque
-     * mixed-alphanumeric tokens — per ADR-0001 ("non-sensitive keys get the same
-     * conservative treatment as free text"). text() alone would mask only
+     * mixed-alphanumeric tokens. The redaction boundary is keyed-aggressive,
+     * free-text-conservative: a sensitive key proves intent, so its values also
+     * get short-digit (CVV) masking; every other key gets exactly the free-text
+     * treatment, no more and no less. text() alone would mask only
      * PAN-shaped runs, letting an opaque secret echoed under a non-sensitive key
      * (e.g. an "apiKey" validation error) pass through unmasked — weaker than the
      * top-level message scrub for the field most likely to echo submitted input.

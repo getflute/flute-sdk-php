@@ -46,12 +46,13 @@ if ($key->clientId === null) {
 /*
  * The clientSecret is returned ONLY here, at creation — print it once so the
  * integrator can capture and store it, exactly as Flute's API surfaces it.
- * This is a sandbox credential that the demo revokes below; see ADR 0007 for
- * why printing a once-shown secret in this example is a deliberate choice.
+ * Printing it is deliberate: the secret is never retrievable again, so the
+ * example must show the one place an integrator can capture it. It is a
+ * sandbox credential that the demo revokes below.
  *
  * The print/revoke pair is wrapped so the demo cleanup always runs: if anything
  * throws after the key is minted, finally still revokes it, so a printed sandbox
- * secret can never outlive the run (ADR 0007). Real onboarding ends at the mint
+ * secret can never outlive the run. Real onboarding ends at the mint
  * above — the merchant keeps the credential; only this demo revokes it.
  */
 try {

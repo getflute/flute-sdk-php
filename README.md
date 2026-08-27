@@ -155,7 +155,7 @@ changes byte order and breaks the HMAC.
 
 - **Laravel:** `$request->getContent()`
 - **Symfony:** `$request->getContent()`
-- **WooCommerce/WordPress:** `file_get_contents('php://input')` inside the REST callback
+- **Other frameworks:** `file_get_contents('php://input')` inside the request handler
 - **Vanilla PHP:** `file_get_contents('php://input')`
 
 **Replay protection.** `verify()` rejects deliveries older than the 5-minute
@@ -282,6 +282,62 @@ $refund = $flute->transactions->refundTransaction(new RefundTransactionRequest(
 
 echo "Refunded {$refund->transactionId}: {$refund->status}\n";
 ```
+
+## Creating a Payment Session for Hosted Checkout
+
+A payment session drives Flute Checkout (hosted redirect) and Flute Elements
+(embedded capture). Set `returnUrl` for hosted Checkout: it is where the shopper
+is sent after paying, and without it the shopper stays on the Flute-hosted page.
+
+```php
+<?php
+
+require 'vendor/autoload.php';
+
+use Flute\Sdk\Enums\PaymentMethodType;
+use Flute\Sdk\Flute;
+use Flute\Sdk\Models\Requests\CreatePaymentSessionRequest;
+
+$flute = new Flute([
+    'clientId' => getenv('FLUTE_CLIENT_ID'),
+    'clientSecret' => getenv('FLUTE_CLIENT_SECRET'),
+    'environment' => 'sandbox',
+]);
+
+$created = $flute->paymentSessions->createPaymentSession(new CreatePaymentSessionRequest(
+    amount: 24.99,
+    referenceId: 'order-1001',
+    returnUrl: 'https://shop.example.com/checkout/return?order=1001',
+    paymentMethodTypes: [PaymentMethodType::Card, PaymentMethodType::Ach],
+    metadata: ['orderId' => '1001'],
+));
+
+// Redirect the shopper here for hosted Checkout.
+echo $created->checkoutUrl, "\n";
+
+// On return (or from a webhook), read the session back.
+$session = $flute->paymentSessions->getPaymentSession($created->id);
+
+echo "Status: {$session->status}\n";           // Created, Cancelled, Completed, Failed
+echo "Return URL: {$session->returnUrl}\n";
+echo "Order: {$session->metadata['orderId']}\n";
+```
+
+Notes:
+
+- `paymentMethodTypes` takes `PaymentMethodType` cases or plain strings. The API
+  requires the lowercase values (`card`, `ach`); the enum cases carry them.
+- `metadata` is a string-to-string map. Values that are not strings, or an empty
+  array, are rejected by the API with a 400.
+- `expiresAt` is an ISO 8601 timestamp string.
+- `mode` selects the session type: `1` payment (default), `2` save a payment
+  method, `3` payment and save.
+- `checkoutUrl` is delivered on the create response. On `getPaymentSession()` it
+  may be absent, in which case the property reads `null`.
+- `surchargeAmount`, `achAccountLast2`, and `achRoutingLast2` are `null` until a
+  payment has been made on the session. `transactionDetails` stays a raw array;
+  `toArray()` returns the full payload for any field without a typed property.
+- Cancel an unpaid session with `cancelPaymentSession($id)`.
 
 ## Partner Workflows: Merchants and API Keys
 
@@ -505,10 +561,6 @@ details are scrubbed of card and secret patterns before they reach the exception
   call arguments in `getTrace()` (what Sentry/Bugsnag/Monolog deep-serialize). The
   SDK marks card and credential parameters `#[\SensitiveParameter]` (redacted on
   PHP 8.2+); the ini setting covers the PHP 8.1 floor and third-party frames.
-
-The exact redaction mechanics (scrub levels, the `var_export()` caveat,
-`RedactedHttpException` internals) are documented in
-[`docs/portal-outline.md`](docs/portal-outline.md).
 
 ## Handling Cardholder Data (PCI)
 

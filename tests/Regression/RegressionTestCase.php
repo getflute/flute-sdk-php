@@ -13,7 +13,7 @@ use Flute\Sdk\Tests\Support\SandboxFixtures;
 use GuzzleHttp\Client;
 
 /**
- * Base for the 25-scenario Flute-facing regression harness.
+ * Base for the Flute-facing regression harness.
  *
  * Real sandbox only — no mocks. Credentials come from the environment
  * (FLUTE_CLIENT_ID / FLUTE_CLIENT_SECRET, merchant-scoped); every case skips
