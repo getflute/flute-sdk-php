@@ -224,4 +224,35 @@ final class PaymentSessionResponsesTest extends TestCase
 
         self::assertSame(21000021, $intEcho->toArray()['achRoutingLast2']);
     }
+
+    public function testGetSessionResponseDebugInfoScrubsTypedUserSuppliedFieldsLikeRaw(): void
+    {
+        // The typed view and the retained raw get the same key-aware scrub: a
+        // credential-named metadata key masks wholesale, a signed returnUrl has
+        // its token run masked, and diagnostics stay readable in both.
+        $session = PaymentSessionResponse::fromArray([
+            'metadata' => ['clientSecret' => 'sk_live_abcdef1234567890', 'orderId' => 'wc-1042'],
+            'returnUrl' => 'https://shop.example.com/return?order=1042&sig=3f9a8c7d6e5b4a39281716151413121110',
+            'pageName' => 'Checkout',
+        ]);
+        $debug = $session->__debugInfo();
+
+        self::assertSame('***', $debug['metadata']['clientSecret']);
+        self::assertSame('wc-1042', $debug['metadata']['orderId']);
+        self::assertStringNotContainsString('3f9a8c7d6e5b4a39281716151413121110', $debug['returnUrl']);
+        self::assertStringStartsWith('https://shop.example.com/return?order=1042&sig=', $debug['returnUrl']);
+        self::assertSame('Checkout', $debug['pageName']);
+        self::assertSame($debug['metadata'], $debug['raw']['metadata']);
+        self::assertSame($debug['returnUrl'], $debug['raw']['returnUrl']);
+
+        ob_start();
+        var_dump($session);
+        $dump = (string) ob_get_clean();
+        self::assertStringNotContainsString('sk_live_abcdef1234567890', $dump);
+        self::assertStringNotContainsString('3f9a8c7d6e5b4a39281716151413121110', $dump);
+
+        // The properties and toArray() are untouched.
+        self::assertSame('sk_live_abcdef1234567890', $session->metadata['clientSecret'] ?? null);
+        self::assertSame('sk_live_abcdef1234567890', $session->toArray()['metadata']['clientSecret']);
+    }
 }

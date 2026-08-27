@@ -99,15 +99,16 @@ final class Data
     }
 
     /**
-     * Extract an object-shaped string-to-string map under $key. Same container
+     * Extract an object-shaped map of string values under $key. Same container
      * guard as arr() (a list is rejected, an empty array is kept); non-string
-     * values are dropped so the array<string, string> contract holds. Numeric-
-     * string keys arrive as ints after JSON decode and are kept; an object
-     * keyed "0", "1", ... decodes to a list and is rejected.
+     * values are dropped so every value is a string. Keys are array-key, not
+     * string: PHP decodes a numeric-string JSON key such as "1042" to int and
+     * cannot hold it as a string, so it is kept as-is rather than dropped. An
+     * object keyed "0", "1", ... decodes to a list and is rejected.
      *
      * @param array<string, mixed> $data
      *
-     * @return array<string, string>|null
+     * @return array<array-key, string>|null
      */
     public static function strMap(array $data, string $key): ?array
     {

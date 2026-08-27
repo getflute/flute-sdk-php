@@ -80,6 +80,12 @@ final class DataTest extends TestCase
                 'm',
             ),
         );
+        // A numeric-string JSON key decodes to an int key in PHP and cannot be
+        // held as a string; it is kept with its value rather than dropped.
+        self::assertSame(
+            [1042 => 'primary', 'orderId' => 'wc-1042'],
+            Data::strMap(['m' => ['1042' => 'primary', 'orderId' => 'wc-1042']], 'm'),
+        );
         // Empty array is the ambiguous decoding of an empty JSON object: kept.
         self::assertSame([], Data::strMap(['m' => []], 'm'));
         // Absent, scalar, and list-shaped values are not maps.

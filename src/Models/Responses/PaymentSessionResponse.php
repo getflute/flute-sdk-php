@@ -22,7 +22,7 @@ final class PaymentSessionResponse
 {
     /**
      * @param array<string, mixed>|null $transactionDetails
-     * @param array<string, string>|null $metadata
+     * @param array<array-key, string>|null $metadata
      * @param list<string>|null $paymentMethodTypes
      * @param array<string, mixed> $raw
      */
@@ -81,12 +81,13 @@ final class PaymentSessionResponse
 
     /**
      * Fail closed for debug output — var_dump()/print_r()/VarDumper (__debugInfo).
-     * Two-digit ACH fragments stay readable; a fuller account or routing echo is
-     * masked in the typed view and in the retained raw. The explicit override on
-     * the two ACH keys exists because a routing number is shorter than the
-     * card-length digit runs Redact::payload() masks on its own. The typed
-     * transactionDetails view is scrubbed too (it can carry a nested customerPan).
-     * toArray() remains the explicit raw path.
+     * The typed view and the retained raw get the same key-aware scrub, so a
+     * credential-named metadata key, a signed returnUrl, a nested customerPan
+     * in transactionDetails, or an opaque identifier is masked identically in
+     * both. Two-digit ACH fragments stay readable; a fuller account or routing
+     * echo is masked — the explicit override on the two ACH keys exists because
+     * a routing number is shorter than the card-length digit runs
+     * Redact::payload() masks on its own. toArray() remains the explicit raw path.
      *
      * @return array<string, mixed>
      */
@@ -94,9 +95,8 @@ final class PaymentSessionResponse
     {
         /** @var array<string, mixed> $view */
         $view = get_object_vars($this);
-        if ($this->transactionDetails !== null) {
-            $view['transactionDetails'] = Redact::payload($this->transactionDetails);
-        }
+        unset($view['raw']);
+        $view = Redact::payload($view);
         $raw = Redact::payload($this->raw);
         foreach (['achAccountLast2', 'achRoutingLast2'] as $key) {
             if ($this->{$key} !== null) {

@@ -14,14 +14,16 @@ use Flute\Sdk\Internal\Data;
  * expiresAt is an ISO 8601 timestamp string. paymentMethodTypes entries may be
  * PaymentMethodType cases or plain strings; strings are sent unchanged so a
  * method type Flute introduces later needs no SDK release. metadata is a
- * string-to-string map; a value that is not a string, or an empty array
- * (which encodes as JSON `[]`, not `{}`), is rejected by the API with a 400.
+ * string-to-string map on the wire; PHP holds a numeric-string key such as
+ * "1042" as an int, which still encodes as {"1042": ...}. A value that is not
+ * a string, or an empty array (which encodes as JSON `[]`, not `{}`), is
+ * rejected by the API with a 400.
  */
 final class CreatePaymentSessionRequest
 {
     /**
      * @param list<PaymentMethodType|string>|null $paymentMethodTypes
-     * @param array<string, string>|null $metadata
+     * @param array<array-key, string>|null $metadata
      */
     public function __construct(
         public readonly ?float $amount = null,
